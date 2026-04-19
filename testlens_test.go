@@ -57,6 +57,9 @@ func TestEndToEnd(t *testing.T) {
 		"Zoom in",
 		"id=\"tl-expand-all\"",
 		"Collapse all",
+		"tl-copy-btn",
+		"Copy task name",
+		"viewBox=\"0 0 115.77 122.88\"",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("output HTML missing %q", want)
