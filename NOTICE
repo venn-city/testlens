@@ -1,0 +1,10 @@
+testlens
+Copyright 2026 Venn City. All rights reserved.
+
+This product includes software developed by Venn City.
+
+Third-party notices
+-------------------
+HTML reports produced by this tool reference JavaScript and CSS for DHTMLX Gantt,
+loaded from https://cdn.dhtmlx.com/ when a report is opened in a browser. Those
+assets are not shipped inside this repository and are governed by their own terms.

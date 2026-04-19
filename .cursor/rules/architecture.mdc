@@ -11,6 +11,10 @@ Testlens is a CLI tool that reads a Go **test2json** log (one JSON object per li
 
 It is **not** a test runner — it only visualizes existing test output.
 
+## License
+
+- **Apache License 2.0** — see repo `LICENSE`; `NOTICE` for attribution and CDN/third-party notes. Source headers use SPDX `Apache-2.0`.
+
 ## Module & Build
 
 - **Module path**: `github.com/venn-city/testlens`

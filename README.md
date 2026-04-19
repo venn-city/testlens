@@ -111,3 +111,7 @@ Notes:
 - **Data shape / hierarchy**: edit `converter.go`.
 - **Styling / Gantt config**: edit `templates/gantt.gohtml` (DHTMLX `gantt.config`, CSS, templates).
 - Prefer **stdlib only**; avoid new module dependencies unless there is a strong reason.
+
+## License
+
+This project is licensed under the **Apache License 2.0** — see the [LICENSE](LICENSE) file. Attribution and third-party notes are in [NOTICE](NOTICE).

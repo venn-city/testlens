@@ -1,3 +1,7 @@
+// Copyright 2026 Venn City. All rights reserved.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import "time"
