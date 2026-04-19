@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.css" type="text/css">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+            background: #1a1a1e;
+            color: #e8e8ed;
+        }
+        .tl-header {
+            padding: 10px 16px;
+            border-bottom: 1px solid #333;
+            background: #25252b;
+        }
+        .tl-header h1 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        #gantt_here {
+            width: 100%;
+            height: calc(100vh - 48px);
+        }
+        /* Status colors (task row lines) */
+        .gantt_task_line.tl-pass { background-color: #2e7d32; border-color: #1b5e20; }
+        .gantt_task_line.tl-fail { background-color: #c62828; border-color: #8e0000; }
+        .gantt_task_line.tl-skip { background-color: #6d6d6d; border-color: #424242; }
+        .gantt_task_line.tl-container { background-color: #1565c0; border-color: #0d47a1; }
+        /* Progress overlay */
+        .gantt_task_progress.tl-pass { background-color: #43a047; opacity: 0.9; }
+        .gantt_task_progress.tl-fail { background-color: #e53935; opacity: 0.9; }
+        .gantt_task_progress.tl-skip { background-color: #9e9e9e; opacity: 0.9; }
+        .gantt_task_progress.tl-container { background-color: #1976d2; opacity: 0.5; }
+        .gantt_grid_scale, .gantt_task .gantt_task_scale { background: #25252b; }
+    </style>
+    <script src="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.js"></script>
+</head>
+<body>
+<div class="tl-header">
+    <h1>{{.Title}}</h1>
+</div>
+<div id="gantt_here"></div>
+<script>
+    (function () {
+        var raw = {{.GanttJSON}};
+        gantt.plugins && gantt.plugins({ tooltip: true });
+
+        gantt.config.xml_date = "%d-%m-%Y %H:%i:%s";
+        gantt.config.duration_unit = "minute";
+        gantt.config.duration_step = 1;
+        gantt.config.scale_unit = "minute";
+        gantt.config.step = 1;
+        gantt.config.date_scale = "%H:%i:%s";
+        gantt.config.subscales = [];
+        gantt.config.min_column_width = 18;
+
+        gantt.config.readonly = true;
+        gantt.config.drag_links = false;
+        gantt.config.drag_progress = false;
+        gantt.config.drag_resize = false;
+        gantt.config.drag_move = false;
+
+        gantt.config.open_tree_initially = true;
+        gantt.config.sort = true;
+
+        gantt.templates.tooltip_text = function (start, end, task) {
+            var d = (end - start) / 1000;
+            return "<b>" + (task.text || "") + "</b><br/>" +
+                "status: " + (task.status || "") + "<br/>" +
+                "duration: " + d.toFixed(3) + "s";
+        };
+
+        gantt.templates.task_class = function (start, end, task) {
+            var s = task.status || "";
+            if (s === "pass") return "tl-pass";
+            if (s === "fail") return "tl-fail";
+            if (s === "skip") return "tl-skip";
+            return "tl-container";
+        };
+
+        gantt.init("gantt_here");
+        gantt.parse(raw);
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+---
+description: Go coding conventions specific to testlens
+globs: "**/*.go"
+alwaysApply: false
+---
+
+# Go Conventions — Testlens
+
+## Stdlib Only
+
+Do not add external module dependencies. All Go code uses the standard library only. If you believe a dependency is needed, explain the reason clearly before introducing it.
+
+## Package Structure
+
+Everything is `package main` at the repo root. Do not create `cmd/`, `internal/`, or `pkg/` directories unless the project explicitly outgrows a single package.
+
+## Error Handling
+
+Wrap errors with context using `%w`:
+
+```go
+return fmt.Errorf("open input: %w", err)
+```
+
+Surface errors to stderr and exit with appropriate codes (1 for runtime errors, 2 for usage errors).
+
+## Naming
+
+- Exported functions follow the pipeline pattern: `ParseTest2JSON`, `EventsToGantt`, `RenderHTML`.
+- Unexported helpers are short and descriptive: `runKey`, `stripModule`, `baseTestName`, `leafTask`.
+- Types map directly to their domain: `TestEvent` (input), `GanttTask`/`GanttData` (output).
+
+## Key Patterns in This Codebase
+
+- **Two-pass event processing** in `converter.go`: first pass collects start times, second pass collects results.
+- **Map-based grouping**: events are grouped by package then by base test name.
+- **Stable deterministic IDs**: `makeID` uses SHA-256 hashing so the same input always produces identical output.
+- **`//go:embed`** for the HTML template in `renderer.go`.
+
+## Testing
+
+No tests exist yet. When adding them:
+
+- Place `*_test.go` files alongside the source in the root package.
+- Use table-driven tests for `converter.go` and `parser.go`.
+- Test data should be small inline JSON strings or files in a `testdata/` directory.

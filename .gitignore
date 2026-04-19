@@ -1,0 +1,81 @@
+# =============================================================================
+# macOS
+# =============================================================================
+.DS_Store
+
+# =============================================================================
+# IDE & Editor Files
+# =============================================================================
+.idea/
+.vscode/*
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# =============================================================================
+# Go
+# =============================================================================
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Go workspace file
+go.work
+
+# Debug binaries
+__debug_bin*
+
+# Compiled binaries (prevent accidental commits)
+graphql
+
+# Dependency directories (uncomment to include)
+# vendor/
+
+# =============================================================================
+# Environment & Configuration
+# =============================================================================
+.env
+.env.local
+.env.*
+
+# =============================================================================
+# Project Specific
+# =============================================================================
+# Workspace file
+venn-platform.code-workspace
+
+# Build output
+/out
+
+# SQL consoles
+/.sql
+/.console
+
+# GoLand specific files
+/shelf/
+/workspace.xml
+/httpRequests/
+/dataSources/
+/dataSources.local.xml
+
+# AI Development Tools
+memory-bank/
+.claude/mcp.json
+.cursor/mcp.json
+.cursor/plans/
+
+
+# test out
+test-out.log
+
+# testlens report
+testlens-report*.html
+test*.html

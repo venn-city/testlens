@@ -1,0 +1,48 @@
+---
+description: HTML template and DHTMLX Gantt styling rules
+globs: "templates/**"
+alwaysApply: false
+---
+
+# Template & Styling — gantt.gohtml
+
+## Template Overview
+
+`templates/gantt.gohtml` is a self-contained HTML page that produces the final report. It uses Go's `html/template` syntax and is embedded into the binary via `//go:embed`.
+
+## Template Variables
+
+- `{{.Title}}` — report title string
+- `{{.GanttJSON}}` — pre-serialized JSON blob (type `template.JS`) containing tasks and links for `gantt.parse()`
+
+## DHTMLX Gantt Configuration
+
+- **Date format**: `%d-%m-%Y %H:%i:%s` (must match `formatDT` in `converter.go`)
+- **Scale**: minutes, with `%H:%i:%s` labels
+- **Readonly**: all drag/link/resize operations are disabled
+- **Tooltip**: shows task name, status, and duration in seconds
+
+## CSS Status Classes
+
+The task status from Go maps to CSS classes via `gantt.templates.task_class`:
+
+| Status      | CSS class       | Bar color |
+| ----------- | --------------- | --------- |
+| `pass`      | `.tl-pass`      | Green     |
+| `fail`      | `.tl-fail`      | Red       |
+| `skip`      | `.tl-skip`      | Gray      |
+| `container` | `.tl-container` | Blue      |
+
+Both `.gantt_task_line` and `.gantt_task_progress` variants exist for each status.
+
+## Design
+
+- Dark theme (`#1a1a1e` background, `#e8e8ed` text)
+- System font stack
+- Header bar at top with title, chart fills remaining viewport height
+
+## When Editing
+
+- Keep the HTML **self-contained** — no external files besides the DHTMLX CDN links.
+- If changing the date format, update both the JS config (`gantt.config.xml_date`) and Go's `formatDT()` in `converter.go`.
+- Test changes by running the tool on a real test2json log and opening the output HTML.

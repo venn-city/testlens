@@ -1,0 +1,74 @@
+---
+description: Testlens project architecture, conventions, and context
+alwaysApply: true
+---
+
+# Testlens — Architecture & Context
+
+## What This Project Is
+
+Testlens is a CLI tool that reads a Go **test2json** log (one JSON object per line) and produces a self-contained **HTML file** with an interactive **DHTMLX Gantt** timeline showing when packages and tests ran, colored by pass/fail/skip status.
+
+It is **not** a test runner — it only visualizes existing test output.
+
+## Module & Build
+
+- **Module path**: `github.com/venn-city/testlens`
+- **Go version**: 1.25.5
+- **Zero external Go dependencies** — stdlib only. Keep it that way unless there is a strong reason.
+- **Build**: `go build -o testlens .` or `go run . <test2json.log> [-o out.html]`
+- **No Makefile, no CI config, no test files yet.**
+
+## Project Layout (flat, single `main` package)
+
+```
+main.go          — CLI entry point, argument parsing, orchestration
+model.go         — Data types: TestEvent (test2json input), GanttTask, GanttData (output)
+parser.go        — Reads test2json log file line-by-line (64 MB scan buffer)
+converter.go     — Core logic: events → hierarchical Gantt task tree (package → test → subtest)
+renderer.go      — Embeds template via go:embed, marshals JSON, writes HTML
+templates/
+  gantt.gohtml   — Self-contained HTML page: dark theme, DHTMLX Gantt init, status colors
+AGENT.md         — Human documentation for the project
+go.mod           — Go module definition (no go.sum needed — no deps)
+```
+
+## Data Flow (pipeline)
+
+```
+test2json log file
+  → parser.go:ParseTest2JSON()    → []TestEvent
+  → converter.go:EventsToGantt()  → GanttData{Tasks, Links, Title}
+  → renderer.go:RenderHTML()       → self-contained HTML file
+```
+
+Each stage is a pure function (file I/O at boundaries only). The pipeline runs in `main()`.
+
+## Key Design Decisions
+
+1. **Hierarchy**: Package → base test → subtest. Packages are `type: "project"` containers in DHTMLX terms.
+2. **Module prefix stripping**: `converter.go` strips `github.com/venn-city/venn-platform` from package paths for cleaner display. The constant `modulePrefix` controls this.
+3. **Stable IDs**: Task IDs use SHA-256 hashes (`makeID`) so the same input always produces the same output.
+4. **Time handling**: `run` events supply start times; if missing, `Elapsed` is used to back-calculate. End times come from `pass`/`fail`/`skip` events.
+5. **DHTMLX date format**: `DD-MM-YYYY HH:mm:ss` (via `formatDT`).
+6. **Template embedding**: `renderer.go` uses `//go:embed` — the template is baked into the binary at compile time.
+7. **CDN dependency**: The generated HTML loads DHTMLX Gantt JS/CSS from `cdn.dhtmlx.com/gantt/edge/`. This is a runtime (browser) dependency, not a Go dependency.
+
+## Conventions
+
+- **Stdlib only** for Go code — no third-party modules.
+- All code lives in `package main` at the repo root. No `cmd/`, `internal/`, or `pkg/` directories.
+- **No tests exist yet.** When adding tests, use standard `*_test.go` files alongside source files.
+- Error handling: wrap with `fmt.Errorf("context: %w", err)`, print to stderr, exit with code 1 (runtime) or 2 (usage).
+- Status values: `"pass"`, `"fail"`, `"skip"`, `"running"`, `"container"` — used for both data and CSS class mapping.
+
+## Where to Edit
+
+| Change needed                       | Edit                     |
+| ----------------------------------- | ------------------------ |
+| Data shape / hierarchy / tree logic | `converter.go`           |
+| Input parsing                       | `parser.go`              |
+| Data models                         | `model.go`               |
+| Styling / Gantt config / chart UX   | `templates/gantt.gohtml` |
+| CLI flags / argument handling       | `main.go`                |
+| Template rendering / output format  | `renderer.go`            |
