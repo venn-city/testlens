@@ -16,8 +16,9 @@ It is **not** a test runner — it only visualizes existing test output.
 - **Module path**: `github.com/venn-city/testlens`
 - **Go version**: 1.25.5
 - **Zero external Go dependencies** — stdlib only. Keep it that way unless there is a strong reason.
-- **Build**: `go build -o testlens .` or `go run . <test2json.log> [-o out.html]`
-- **No Makefile, no CI config, no test files yet.**
+- **Build**: `go build -o testlens .` or `go run . -in <test2json.log> [-o out.html]`
+- **CLI**: Implemented with `flag.FlagSet` + `partitionArgs` in `main.go` (see `go-conventions.mdc`).
+- **Tests**: `go test ./...` — unit tests for converter, main arg splitting, parser, and end-to-end HTML smoke checks.
 
 ## Project Layout (flat, single `main` package)
 
@@ -58,7 +59,7 @@ Each stage is a pure function (file I/O at boundaries only). The pipeline runs i
 
 - **Stdlib only** for Go code — no third-party modules.
 - All code lives in `package main` at the repo root. No `cmd/`, `internal/`, or `pkg/` directories.
-- **No tests exist yet.** When adding tests, use standard `*_test.go` files alongside source files.
+- **Tests**: standard `*_test.go` files in the module root; run `go test ./...`.
 - Error handling: wrap with `fmt.Errorf("context: %w", err)`, print to stderr, exit with code 1 (runtime) or 2 (usage).
 - Status values: `"pass"`, `"fail"`, `"skip"`, `"running"`, `"container"` — used for both data and CSS class mapping.
 

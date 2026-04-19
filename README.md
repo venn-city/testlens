@@ -15,10 +15,10 @@ Expanded tree with pass (green) / fail (red) tests, tooltips, and zoom controls:
 ## Run
 
 ```bash
-go run . <test2json.log> [-o output.html]
+go run . -in test2json.log [-o output.html]
 ```
 
-Default output path: `testlens-report.html`. The `-o` / `--output` flag may appear before or after the input file. Use `go run . --help` for full usage.
+Default output path: `testlens-report.html`. The input file is always passed with **`-in`**, which matches idiomatic use of Go’s [`flag`](https://pkg.go.dev/flag) package (no positional arguments). Use `go run . -help` for full usage.
 
 Input must be JSON lines compatible with `encoding/json` unmarshaling into `TestEvent` in `model.go` (`Time`, `Action`, `Package`, `Test`, `Elapsed`, `Output`).
 

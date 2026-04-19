@@ -2,19 +2,19 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
-var errShowHelp = errors.New("help")
+var errHelpOK = errors.New("help")
 
 func main() {
-	inPath, outPath, err := parseArgs(os.Args[1:])
+	inPath, outPath, err := parseFlags(os.Args[1:])
 	if err != nil {
-		if errors.Is(err, errShowHelp) {
+		if errors.Is(err, errHelpOK) {
 			printHelp(os.Stdout)
 			return
 		}
@@ -61,54 +61,61 @@ HOW TO CAPTURE INPUT
 
 USAGE
 
-  %s <test2json-log-file> [options]
+  %s -in <test2json-log-file> [-o output.html]
 
-OPTIONS
+FLAGS
 
-  -o, --output <path>   Write HTML to this path (default: testlens-report.html)
-  -h, --help            Show this message and exit
+  -in path   Path to the test2json log file (required to generate a report)
+  -o path    Write HTML to this path (default: testlens-report.html)
+  -h -help   Show this message and exit (status 0)
+
+  Run with no flags (or only -h/-help) to print this help. If you pass -o without
+  -in, an error is reported.
 
 EXAMPLES
 
-  %s test-out.log
-  %s test-out.log -o report.html
-  %s -o report.html test-out.log
+  %s -in test-out.log
+  %s -in test-out.log -o report.html
 
-`, name, name, name, name)
+`, name, name, name)
 }
 
-// parseArgs accepts `testlens in.log -o out.html` or `testlens -o out.html in.log`.
-func parseArgs(args []string) (inPath, outPath string, err error) {
+// parseFlags implements CLI parsing with the stdlib flag package only (no positional args).
+func parseFlags(args []string) (inPath, outPath string, err error) {
+	fs := flag.NewFlagSet(progName(), flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	var help bool
+	fs.BoolVar(&help, "h", false, "show help")
+	fs.BoolVar(&help, "help", false, "show help")
+
 	outPath = "testlens-report.html"
-	var positional []string
-	sawOutputFlag := false
-	for i := 0; i < len(args); i++ {
-		a := args[i]
-		switch {
-		case a == "-h" || a == "--help":
-			return "", "", errShowHelp
-		case a == "-o" || a == "--output":
-			sawOutputFlag = true
-			if i+1 >= len(args) {
-				return "", "", fmt.Errorf("missing value after %s", a)
+	fs.StringVar(&outPath, "o", outPath, "write HTML to `path`")
+	fs.StringVar(&inPath, "in", "", "path to test2json `log` file")
+
+	// flag.failf calls Usage before returning parse errors; we print help once from main.
+	fs.Usage = func() {}
+
+	if err := fs.Parse(args); err != nil {
+		return "", "", err
+	}
+	if help {
+		return "", "", errHelpOK
+	}
+	if fs.NArg() > 0 {
+		return "", "", fmt.Errorf("unexpected arguments %q — use -in for the log file", fs.Args())
+	}
+	if inPath == "" {
+		var anyExceptHelp bool
+		fs.Visit(func(f *flag.Flag) {
+			if f.Name != "h" && f.Name != "help" {
+				anyExceptHelp = true
 			}
-			outPath = args[i+1]
-			i++
-		case strings.HasPrefix(a, "-"):
-			return "", "", fmt.Errorf("unknown flag %q (try --help)", a)
-		default:
-			positional = append(positional, a)
+		})
+		if anyExceptHelp {
+			return "", "", fmt.Errorf("-in is required (path to the test2json log file)")
 		}
+		return "", "", errHelpOK
 	}
-	if len(positional) == 0 {
-		if !sawOutputFlag {
-			// No args, or only --help-style invocation: same as -h (success, no stderr).
-			return "", "", errShowHelp
-		}
-		return "", "", fmt.Errorf("missing test2json log file (pass one path, or use --help)")
-	}
-	if len(positional) > 1 {
-		return "", "", fmt.Errorf("expected exactly one test2json log file, got %d", len(positional))
-	}
-	return positional[0], outPath, nil
+	return inPath, outPath, nil
 }

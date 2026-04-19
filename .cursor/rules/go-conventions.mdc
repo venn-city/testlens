@@ -36,11 +36,9 @@ Surface errors to stderr and exit with appropriate codes (1 for runtime errors, 
 - **Map-based grouping**: events are grouped by package then by base test name.
 - **Stable deterministic IDs**: `makeID` uses SHA-256 hashing so the same input always produces identical output.
 - **`//go:embed`** for the HTML template in `renderer.go`.
+- **CLI**: `main.go` uses the stdlib [`flag`](https://pkg.go.dev/flag) package only: `flag.NewFlagSet` + `StringVar` for **`-in`** (test2json log) and **`-o`** (HTML output), `BoolVar` for **`-h`/`-help`**, then `Parse(os.Args[1:])`. No positional arguments — this avoids reordering hacks and matches common Go tool style. `FlagSet.Usage` is a no-op so `printHelp` is not duplicated when `flag` reports parse errors (`failf` calls `usage()` internally).
 
 ## Testing
 
-No tests exist yet. When adding them:
-
-- Place `*_test.go` files alongside the source in the root package.
-- Use table-driven tests for `converter.go` and `parser.go`.
-- Test data should be small inline JSON strings or files in a `testdata/` directory.
+- Tests live alongside sources: `*_test.go` in the module root (`testlens_test.go`, `converter_test.go`, `main_test.go`, etc.).
+- Use table-driven tests where it keeps cases clear; integration tests may read `test-out.log` when present.
