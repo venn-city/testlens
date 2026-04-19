@@ -2,13 +2,23 @@
 
 CLI that reads a Go **test2json** log (one JSON object per line; see `go help testflag` / `cmd/test2json`) and writes a self-contained **HTML** file with an interactive **DHTMLX Gantt** timeline.
 
+## Screenshots
+
+Package rows on the timeline (collapsed tree, duration column, second-level time scale):
+
+![testlens report — packages on the timeline](example_1.png)
+
+Expanded tree with pass (green) / fail (red) tests, tooltips, and zoom controls:
+
+![testlens report — expanded tests and status colors](example_2.png)
+
 ## Run
 
 ```bash
-go run ./cmd/testlens <test2json.log> [-o output.html]
+go run . <test2json.log> [-o output.html]
 ```
 
-Default output path: `testlens-report.html`. The `-o` / `--output` flag may appear before or after the input file.
+Default output path: `testlens-report.html`. The `-o` / `--output` flag may appear before or after the input file. Use `go run . --help` for full usage.
 
 Input must be JSON lines compatible with `encoding/json` unmarshaling into `TestEvent` in `model.go` (`Time`, `Action`, `Package`, `Test`, `Elapsed`, `Output`).
 
