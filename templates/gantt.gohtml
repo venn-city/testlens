@@ -96,6 +96,23 @@
         .gantt_task_progress.tl-skip { background-color: #9e9e9e; opacity: 0.9; }
         .gantt_task_progress.tl-container { background-color: #1976d2; opacity: 0.5; }
         .gantt_grid_scale, .gantt_task .gantt_task_scale { background: #25252b; }
+        /* Grid column titles + timeline scale: same color as app header text */
+        .gantt_grid_head_cell,
+        .gantt_grid_head_cell .gantt_grid_head_text,
+        .gantt_grid .gantt_grid_scale .gantt_grid_head_cell {
+            color: #e8e8ed;
+        }
+        .gantt_task .gantt_scale_cell,
+        .gantt_task .gantt_scale_line,
+        .gantt_task_scale .gantt_scale_cell,
+        .gantt_task_scale .gantt_scale_line {
+            color: #e8e8ed;
+        }
+        .gantt_task .gantt_scale_cell span,
+        .gantt_task_scale .gantt_scale_cell span {
+            color: #e8e8ed;
+            font-size: 0.7rem;
+        }
     </style>
     <script src="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.js"></script>
 </head>
@@ -145,13 +162,24 @@
             return d;
         };
 
+        /** Secondary row: show only the seconds field (upper scale has full time). */
+        function scaleFormatSecondsOnly(date) {
+            var s = date.getSeconds();
+            return (s < 10 ? "0" : "") + s;
+        }
+        /** Secondary row when the lower scale is by minute: show only minutes. */
+        function scaleFormatMinutesOnly(date) {
+            var m = date.getMinutes();
+            return (m < 10 ? "0" : "") + m;
+        }
+
         var zoomLevels = [
             {
                 label: "2s",
                 minCol: 18,
                 scales: [
                     { unit: "minute", step: 1, format: "%H:%i:%s" },
-                    { unit: "second", step: 2, format: "%H:%i:%s" }
+                    { unit: "second", step: 2, format: scaleFormatSecondsOnly }
                 ]
             },
             {
@@ -159,7 +187,7 @@
                 minCol: 16,
                 scales: [
                     { unit: "minute", step: 1, format: "%H:%i:%s" },
-                    { unit: "second", step: 5, format: "%H:%i:%s" }
+                    { unit: "second", step: 5, format: scaleFormatSecondsOnly }
                 ]
             },
             {
@@ -167,7 +195,7 @@
                 minCol: 14,
                 scales: [
                     { unit: "minute", step: 1, format: "%H:%i:%s" },
-                    { unit: "second", step: 15, format: "%H:%i:%s" }
+                    { unit: "second", step: 15, format: scaleFormatSecondsOnly }
                 ]
             },
             {
@@ -175,7 +203,7 @@
                 minCol: 12,
                 scales: [
                     { unit: "hour", step: 1, format: "%H:%i" },
-                    { unit: "minute", step: 1, format: "%H:%i:%s" }
+                    { unit: "minute", step: 1, format: scaleFormatMinutesOnly }
                 ]
             },
             {
@@ -183,7 +211,7 @@
                 minCol: 10,
                 scales: [
                     { unit: "hour", step: 1, format: "%H:%i" },
-                    { unit: "minute", step: 5, format: "%H:%i" }
+                    { unit: "minute", step: 5, format: scaleFormatMinutesOnly }
                 ]
             }
         ];
@@ -231,15 +259,62 @@
         gantt.config.drag_resize = false;
         gantt.config.drag_move = false;
 
-        gantt.config.open_tree_initially = true;
+        gantt.config.open_tree_initially = false;
         // Keep row order as in JSON (chronological under each parent from the converter).
         gantt.config.sort = false;
 
+        function formatDurationHuman(task) {
+            var s = task.start_date;
+            var e = task.end_date;
+            if (!s || !e) {
+                return "";
+            }
+            var ms = e.getTime() - s.getTime();
+            if (ms < 0) {
+                ms = 0;
+            }
+            if (ms < 1) {
+                return "0 ms";
+            }
+            if (ms < 1000) {
+                return Math.round(ms) + " ms";
+            }
+            var sec = ms / 1000;
+            if (sec < 60) {
+                var dec = sec >= 100 ? 1 : sec >= 10 ? 2 : 3;
+                var t = sec.toFixed(dec).replace(/\.?0+$/, "");
+                return t + " s";
+            }
+            var min = Math.floor(sec / 60);
+            var rsec = sec - min * 60;
+            if (min < 60) {
+                var rs = rsec >= 10 ? rsec.toFixed(1).replace(/\.0$/, "") : rsec.toFixed(2).replace(/\.?0+$/, "");
+                return min + " min " + rs + " s";
+            }
+            var h = Math.floor(min / 60);
+            var m = min % 60;
+            return h + " h " + m + " min";
+        }
+
+        // No default "+" (add task) column — this chart is read-only; that column is only for adding rows in edit mode.
+        gantt.config.columns = [
+            { name: "text", label: "Task name", width: "*", tree: true, resize: true, min_width: 120 },
+            {
+                name: "duration",
+                label: "Duration",
+                align: "right",
+                width: 96,
+                resize: true,
+                template: function (task) {
+                    return formatDurationHuman(task);
+                }
+            }
+        ];
+
         gantt.templates.tooltip_text = function (start, end, task) {
-            var d = (end - start) / 1000;
             return "<b>" + (task.text || "") + "</b><br/>" +
                 "status: " + (task.status || "") + "<br/>" +
-                "duration: " + d.toFixed(3) + "s";
+                "duration: " + formatDurationHuman(task);
         };
 
         gantt.templates.task_class = function (start, end, task) {
