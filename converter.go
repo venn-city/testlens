@@ -71,7 +71,14 @@ func EventsToGantt(events []TestEvent, title string) GanttData {
 	for p := range byPkg {
 		pkgOrder = append(pkgOrder, p)
 	}
-	sort.Strings(pkgOrder)
+	sort.Slice(pkgOrder, func(i, j int) bool {
+		si := pkgSortStart(byPkg[pkgOrder[i]], pkgStarts)
+		sj := pkgSortStart(byPkg[pkgOrder[j]], pkgStarts)
+		if !si.Equal(sj) {
+			return si.Before(sj)
+		}
+		return pkgOrder[i] < pkgOrder[j]
+	})
 
 	var tasks []GanttTask
 
@@ -105,7 +112,14 @@ func EventsToGantt(events []TestEvent, title string) GanttData {
 		for b := range byBase {
 			bases = append(bases, b)
 		}
-		sort.Strings(bases)
+		sort.Slice(bases, func(i, j int) bool {
+			gi, gj := byBase[bases[i]], byBase[bases[j]]
+			si, sj := minTime(gi), minTime(gj)
+			if !si.Equal(sj) {
+				return si.Before(sj)
+			}
+			return bases[i] < bases[j]
+		})
 
 		for _, base := range bases {
 			group := byBase[base]
@@ -219,8 +233,25 @@ func findSubs(rs []testResult, base string) []testResult {
 			out = append(out, r)
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].FullTest < out[j].FullTest })
+	sort.Slice(out, func(i, j int) bool {
+		if !out[i].Start.Equal(out[j].Start) {
+			return out[i].Start.Before(out[j].Start)
+		}
+		return out[i].FullTest < out[j].FullTest
+	})
 	return out
+}
+
+// pkgSortStart is the timeline position used to order top-level packages.
+func pkgSortStart(rs []testResult, pkgStarts map[string]time.Time) time.Time {
+	if len(rs) == 0 {
+		return time.Time{}
+	}
+	pkgFull := rs[0].PackageFull
+	if t, ok := pkgStarts[pkgFull]; ok {
+		return t
+	}
+	return minTime(rs)
 }
 
 func minTime(rs []testResult) time.Time {

@@ -19,11 +19,67 @@
             padding: 10px 16px;
             border-bottom: 1px solid #333;
             background: #25252b;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
         }
         .tl-header h1 {
             margin: 0;
             font-size: 1rem;
             font-weight: 600;
+        }
+        .tl-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .tl-tree {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tl-tree button {
+            font: inherit;
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #2a2a32;
+            color: #e8e8ed;
+            cursor: pointer;
+        }
+        .tl-tree button:hover {
+            background: #35353e;
+        }
+        .tl-zoom {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tl-zoom-label {
+            font-size: 0.8rem;
+            color: #9e9e9e;
+            min-width: 4.5rem;
+        }
+        .tl-zoom button {
+            font: inherit;
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #2a2a32;
+            color: #e8e8ed;
+            cursor: pointer;
+        }
+        .tl-zoom button:hover {
+            background: #35353e;
+        }
+        .tl-zoom button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
         }
         #gantt_here {
             width: 100%;
@@ -46,6 +102,17 @@
 <body>
 <div class="tl-header">
     <h1>{{.Title}}</h1>
+    <div class="tl-controls">
+        <div class="tl-tree">
+            <button type="button" id="tl-expand-all" title="Expand all groups">Expand all</button>
+            <button type="button" id="tl-collapse-all" title="Collapse all groups">Collapse all</button>
+        </div>
+        <div class="tl-zoom">
+            <span class="tl-zoom-label" id="tl-zoom-label" aria-live="polite"></span>
+            <button type="button" id="tl-zoom-in" title="Finer time scale (more detail)">Zoom in</button>
+            <button type="button" id="tl-zoom-out" title="Coarser time scale (less detail)">Zoom out</button>
+        </div>
+    </div>
 </div>
 <div id="gantt_here"></div>
 <script>
@@ -53,14 +120,110 @@
         var raw = {{.GanttJSON}};
         gantt.plugins && gantt.plugins({ tooltip: true });
 
+        // DHTMLX has no built-in "second" scale unit; register it for sub-minute timelines.
+        function secondScaleStep() {
+            var scales = gantt.config.scales || [];
+            for (var i = 0; i < scales.length; i++) {
+                if (scales[i].unit === "second") {
+                    return scales[i].step || 1;
+                }
+            }
+            return 1;
+        }
+        gantt.date.second_start = function (date) {
+            var step = secondScaleStep();
+            var d = new Date(date);
+            d.setMilliseconds(0);
+            var sec = d.getSeconds();
+            d.setSeconds(sec - (sec % step));
+            return d;
+        };
+        gantt.date.add_second = function (date, inc) {
+            var step = secondScaleStep();
+            var d = new Date(date);
+            d.setSeconds(d.getSeconds() + inc * step);
+            return d;
+        };
+
+        var zoomLevels = [
+            {
+                label: "2s",
+                minCol: 18,
+                scales: [
+                    { unit: "minute", step: 1, format: "%H:%i:%s" },
+                    { unit: "second", step: 2, format: "%H:%i:%s" }
+                ]
+            },
+            {
+                label: "5s",
+                minCol: 16,
+                scales: [
+                    { unit: "minute", step: 1, format: "%H:%i:%s" },
+                    { unit: "second", step: 5, format: "%H:%i:%s" }
+                ]
+            },
+            {
+                label: "15s",
+                minCol: 14,
+                scales: [
+                    { unit: "minute", step: 1, format: "%H:%i:%s" },
+                    { unit: "second", step: 15, format: "%H:%i:%s" }
+                ]
+            },
+            {
+                label: "1m",
+                minCol: 12,
+                scales: [
+                    { unit: "hour", step: 1, format: "%H:%i" },
+                    { unit: "minute", step: 1, format: "%H:%i:%s" }
+                ]
+            },
+            {
+                label: "5m",
+                minCol: 10,
+                scales: [
+                    { unit: "hour", step: 1, format: "%H:%i" },
+                    { unit: "minute", step: 5, format: "%H:%i" }
+                ]
+            }
+        ];
+
+        var zoomIndex = 0;
+
+        function applyZoomLevel(i) {
+            zoomIndex = Math.max(0, Math.min(zoomLevels.length - 1, i));
+            var z = zoomLevels[zoomIndex];
+            gantt.config.scales = z.scales;
+            gantt.config.min_column_width = z.minCol;
+            var label = document.getElementById("tl-zoom-label");
+            if (label) {
+                label.textContent = "Scale: " + z.label;
+            }
+            var zIn = document.getElementById("tl-zoom-in");
+            var zOut = document.getElementById("tl-zoom-out");
+            if (zIn) zIn.disabled = zoomIndex <= 0;
+            if (zOut) zOut.disabled = zoomIndex >= zoomLevels.length - 1;
+        }
+
+        /** Visible range: first task start − 1s through last task end + 1s */
+        function fitTaskViewport() {
+            var range = gantt.getSubtaskDates();
+            if (!range.start_date || !range.end_date) {
+                return;
+            }
+            var d0 = new Date(range.start_date.valueOf());
+            var d1 = new Date(range.end_date.valueOf());
+            d0.setSeconds(d0.getSeconds() - 1);
+            d1.setSeconds(d1.getSeconds() + 1);
+            gantt.config.start_date = d0;
+            gantt.config.end_date = d1;
+        }
+
         gantt.config.xml_date = "%d-%m-%Y %H:%i:%s";
-        gantt.config.duration_unit = "minute";
+        gantt.config.duration_unit = "second";
         gantt.config.duration_step = 1;
-        gantt.config.scale_unit = "minute";
-        gantt.config.step = 1;
-        gantt.config.date_scale = "%H:%i:%s";
-        gantt.config.subscales = [];
-        gantt.config.min_column_width = 18;
+
+        applyZoomLevel(0);
 
         gantt.config.readonly = true;
         gantt.config.drag_links = false;
@@ -69,7 +232,8 @@
         gantt.config.drag_move = false;
 
         gantt.config.open_tree_initially = true;
-        gantt.config.sort = true;
+        // Keep row order as in JSON (chronological under each parent from the converter).
+        gantt.config.sort = false;
 
         gantt.templates.tooltip_text = function (start, end, task) {
             var d = (end - start) / 1000;
@@ -88,6 +252,44 @@
 
         gantt.init("gantt_here");
         gantt.parse(raw);
+        fitTaskViewport();
+        gantt.render();
+
+        document.getElementById("tl-zoom-in").addEventListener("click", function () {
+            applyZoomLevel(zoomIndex - 1);
+            fitTaskViewport();
+            gantt.render();
+        });
+        document.getElementById("tl-zoom-out").addEventListener("click", function () {
+            applyZoomLevel(zoomIndex + 1);
+            fitTaskViewport();
+            gantt.render();
+        });
+
+        function setAllBranchesOpen(open) {
+            gantt.batchUpdate(function () {
+                gantt.eachTask(function (task) {
+                    var kids = gantt.getChildren(task.id);
+                    if (!kids || !kids.length) {
+                        return;
+                    }
+                    if (open) {
+                        gantt.open(task.id);
+                    } else {
+                        gantt.close(task.id);
+                    }
+                });
+            });
+        }
+
+        document.getElementById("tl-expand-all").addEventListener("click", function () {
+            setAllBranchesOpen(true);
+            gantt.render();
+        });
+        document.getElementById("tl-collapse-all").addEventListener("click", function () {
+            setAllBranchesOpen(false);
+            gantt.render();
+        });
     })();
 </script>
 </body>

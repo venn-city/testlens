@@ -48,6 +48,11 @@ func TestEndToEnd(t *testing.T) {
 		"dhtmlxgantt",
 		"E2E Test Report",
 		"gantt.parse",
+		"fitTaskViewport",
+		"id=\"tl-zoom-in\"",
+		"Zoom in",
+		"id=\"tl-expand-all\"",
+		"Collapse all",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("output HTML missing %q", want)
